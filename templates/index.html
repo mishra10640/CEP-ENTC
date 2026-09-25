@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en" style="font-size: 130%;"> <!-- Root font size increased to 130% for massive 100% zoom scale -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Care System // HUD Terminal</title>
+    
+    <!-- Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        /* HUD CYBERPUNK VARIABLES */
+        :root {
+            --bg-light: #f0f5f9;
+            --box-glass: rgba(255, 255, 255, 0.95); /* More solid white like screenshot */
+            --panel-bg: var(--box-glass);
+            --border-sharp: rgba(0, 122, 153, 0.15); /* Softer borders */
+            --cyan-glow: #007a99; 
+            --cyan-dim: rgba(0, 122, 153, 0.15);
+            --amber-warn: #d96600;
+            --blood-red: #cc0000;
+            --pink-scan: #cc0044;
+            --text-main: #020617; 
+            --text-muted: #334155; 
+        }
+        
+        body {
+            background-color: var(--bg-light);
+            color: var(--text-main);
+            font-family: 'Arists', sans-serif, system-ui;
+            overflow-x: hidden;
+            margin: 0;
+            min-height: 100vh;
+        }
+
+        .modern-font {
+            font-family: 'Arists', sans-serif, system-ui !important;
+        }
+
+        /* --- MOVING CYBERPUNK BACKGROUND IMAGE --- */
+        .cyberpunk-bg-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -10;
+            overflow: hidden;
+            background-color: var(--bg-light);
+        }
+
+        .cyberpunk-bg {
+            width: 100%;
+            height: 100%;
+            background-image: url('static/image_22102b.jpg');
+            background-size: 130% 130%; 
+            background-position: 0% 50%;
+            filter: brightness(1.7) contrast(0.7) grayscale(10%) saturate(100%);
+            animation: camera-pan 35s ease-in-out infinite alternate;
+        }
+
+        @keyframes camera-pan {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 100% 50%; }
+        }
+
+        .light-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(240, 248, 255, 0.85); /* Whiter overlay matching screenshot */
+            z-index: -9;
+            pointer-events: none;
+        }
+
+        h1, h2, h3, h4, h5, h6, button, input, span, a, p, label { 
+            letter-spacing: 0.5px;
+            font-weight: 600; 
+        }
+
+        /* HUD Panels */
+        .hud-panel { 
+            background: var(--panel-bg); 
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            position: relative;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+            border: 1px solid rgba(0,0,0,0.08); /* Clean thin border */
+        }
+
+        .hospital-row:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 15px 30px rgba(0, 122, 153, 0.10);
+            background-color: #ffffff !important; 
+            border: 1px solid var(--cyan-glow);
+            z-index: 50;
+        }
+
+        /* Base HUD Buttons */
+        .hud-btn {
+            background: #ffffff; 
+            color: var(--text-main); 
+            font-weight: 800;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.2s ease;
+            border: 1px solid var(--text-main);
+            border-radius: 2px;
+        }
+
+        .hud-btn:hover {
+            background-color: var(--text-main);
+            color: #ffffff;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Header Login Buttons */
+        .admin-btn {
+            background-color: transparent !important;
+            color: var(--text-main) !important;
+            border: none !important;
+            box-shadow: none !important;
+            font-size: 0.85rem;
+            padding: 0 !important;
+            backdrop-filter: none;
+        }
+        
+        .staff-btn {
+            background-color: transparent !important;
+            color: var(--text-main) !important;
+            border: none !important;
+            box-shadow: none !important;
+            font-size: 0.85rem;
+            padding: 0 !important;
+            backdrop-filter: none;
+        }
+
+        /* Solid Dropdowns for Logins */
+        .solid-dropdown {
+            background-color: #ffffff !important;
+            backdrop-filter: none !important;
+            border-radius: 4px;
+            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.3) !important;
+            z-index: 100;
+            border: 1px solid var(--cyan-glow);
+        }
+
+        /* Search Input */
+        .filter-input {
+            background: #ffffff;
+            color: var(--text-main);
+            border-bottom: 2px solid var(--text-main);
+            font-weight: 800 !important;
+            letter-spacing: 1px;
+            border-radius: 2px;
+        }
+        .filter-input:focus { outline: none; border-color: var(--cyan-glow); }
+        .filter-input::placeholder { color: var(--text-main); font-weight: 800 !important; }
+
+        /* Custom Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0, 0.05); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: var(--cyan-glow); border-radius: 10px; }
+
+        /* Accordion */
+        .filter-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out, padding 0.3s ease-out; }
+        .filter-content.open { max-height: 400px; padding-top: 12px; padding-bottom: 12px; }
+
+        /* Scanline Overlay */
+        .scanline {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,0) 50%, rgba(0,0,0,0.02) 50%, rgba(0,0,0,0.02));
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 999;
+        }
+    </style>
+</head>
+<body class="min-h-screen relative flex flex-col">
+    
+    <!-- MOVING BACKGROUND SYSTEM -->
+    <div class="cyberpunk-bg-container">
+        <div class="cyberpunk-bg"></div>
+    </div>
+    <div class="light-overlay"></div>
+    <div class="scanline"></div>
+
+    <!-- MAIN PAGE HEADING AREA -->
+    <div class="pt-4 pb-2 px-6 lg:px-10 flex flex-row items-center relative z-20">
+        <div class="w-16 h-16 flex items-center justify-center shrink-0 mr-4">
+            <img src="static/image_230b89.png" alt="Logo" class="w-full h-full object-contain mix-blend-multiply opacity-90">
+        </div>
+        <div class="flex-1">
+            <h1 class="modern-font text-3xl font-black text-black tracking-tight leading-none">
+                Centralised Bed System, Pune
+            </h1>
+        </div>
+        
+        <div class="text-[var(--blood-red)] text-xs font-black tracking-wider modern-font ml-auto">
+            <i class="far fa-clock mr-1"></i> Last Updated: <span id="live-datetime"></span>
+        </div>
+    </div>
+
+    <!-- STICKY HEADER WRAPPER -->
+    <div class="sticky top-0 z-40 w-full border-y border-slate-300 shadow-sm bg-[rgba(245,250,255,0.9)] backdrop-blur-md">
+        <div class="w-full px-6 lg:px-10 mx-auto py-2 flex flex-row items-center justify-between">
+            
+            <!-- Left: Search Box -->
+            <div class="flex items-center space-x-3 w-1/3 shrink-0">
+                <div class="w-10 h-10 rounded-sm flex items-center justify-center text-white bg-black shrink-0">
+                    <i class="fas fa-satellite-dish text-xl animate-pulse"></i>
+                </div>
+                <div class="relative w-full max-w-xs">
+                    <input type="text" id="hospitalSearch" placeholder="SEARCH HOSPITALS" oninput="applyFilters()"
+                        class="filter-input w-full text-xs block pl-4 pr-3 py-2.5 shadow-sm transition-all whitespace-nowrap border-slate-300">
+                </div>
+            </div>
+
+            <!-- Middle: Title -->
+            <div class="flex-1 flex justify-center">
+                <h2 class="modern-font text-base font-black text-slate-900 tracking-widest whitespace-nowrap">
+                    Bed Availability Dashboard
+                </h2>
+            </div>
+
+            <!-- Right: Logins -->
+            <div class="flex items-center justify-end space-x-6 w-1/3 shrink-0">
+                <div class="relative group z-50">
+                    <button class="hud-btn admin-btn flex items-center cursor-pointer whitespace-nowrap">
+                        <i class="fas fa-lock mr-2 text-slate-800 text-xs"></i> <span class="font-bold">Admin Login</span>
+                    </button>
+                    <!-- Dropdown structure kept intact but visually hidden until hover -->
+                    <div class="absolute right-0 mt-2 w-64 solid-dropdown p-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                        <div class="max-h-60 overflow-y-auto custom-scrollbar">
+                            {% for h in hospitals %}
+                            <a href="/hospital/{{ h.id }}/admin" class="block px-3 py-3 text-sm font-bold hover:bg-[var(--cyan-glow)] hover:text-white transition-colors border-b border-slate-100 whitespace-nowrap overflow-hidden text-ellipsis">
+                                > {{ h.name }}
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="relative group z-50">
+                    <button class="hud-btn staff-btn flex items-center cursor-pointer whitespace-nowrap text-rose-700">
+                        <i class="far fa-user mr-2 text-rose-600 text-xs"></i> <span class="font-bold text-rose-700">Staff Login</span>
+                    </button>
+                    <!-- Dropdown structure -->
+                    <div class="absolute right-0 mt-2 w-64 solid-dropdown border-rose-500 p-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                        <div class="max-h-60 overflow-y-auto custom-scrollbar">
+                            {% for h in hospitals %}
+                            <a href="/hospital/{{ h.id }}/login" class="block px-3 py-3 text-sm font-bold hover:bg-rose-600 hover:text-white transition-colors border-b border-slate-100 whitespace-nowrap overflow-hidden text-ellipsis">
+                                > {{ h.name }}
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="flex-1 w-full px-6 lg:px-10 mx-auto py-6 flex flex-row gap-8 relative z-30">
+        
+        <!-- LEFT SIDEBAR: FILTERS -->
+        <aside class="w-1/4 shrink-0 relative z-30 max-w-[280px]">
+            <div class="sticky top-20 space-y-4">
+                
+                <!-- FILTER BOX TEMPLATE -->
+                <div class="hud-panel z-30 relative bg-white border border-slate-200">
+                    <button onclick="toggleAccordion('distance-section')" class="w-full px-4 py-3 text-left font-black text-sm tracking-wide flex justify-between items-center text-black cursor-pointer">
+                        <span>Distance Radius</span>
+                        <i id="icon-distance-section" class="fas fa-caret-down text-xs transition-transform" style="transform: rotate(0deg);"></i>
+                    </button>
+                    <div id="distance-section" class="filter-content px-4 bg-white relative z-40 border-t border-slate-100">
+                        <label class="flex items-center text-xs font-bold text-slate-700 cursor-pointer hover:text-black py-2 mb-1">
+                            <input type="radio" name="distance" value="all" checked class="w-3 h-3 mr-3 cursor-pointer" onchange="applyFilters()"> Show All
+                        </label>
+                        <label class="flex items-center text-xs font-bold text-slate-700 cursor-pointer hover:text-black py-2 mb-1">
+                            <input type="radio" name="distance" value="5" class="w-3 h-3 mr-3 cursor-pointer" onchange="applyFilters()"> Upto 5 Km Radius
+                        </label>
+                        <label class="flex items-center text-xs font-bold text-slate-700 cursor-pointer hover:text-black py-2 mb-1">
+                            <input type="radio" name="distance" value="10" class="w-3 h-3 mr-3 cursor-pointer" onchange="applyFilters()"> Upto 10 Km Radius
+                        </label>
+                    </div>
+                </div>
+
+                <div class="hud-panel z-30 relative bg-white border border-slate-200">
+                    <button onclick="toggleAccordion('beds-section')" class="w-full px-4 py-3 text-left font-black text-sm tracking-wide flex justify-between items-center text-black cursor-pointer">
+                        <span>Vacant Beds</span>
+                        <i id="icon-beds-section" class="fas fa-caret-down text-xs transition-transform" style="transform: rotate(0deg);"></i>
+                    </button>
+                    <div id="beds-section" class="filter-content px-4 bg-white relative z-40 border-t border-slate-100">
+                        <label class="flex items-center text-xs font-bold text-slate-700 cursor-pointer hover:text-black py-2 mb-1">
+                            <input type="radio" name="beds" value="0" checked class="w-3 h-3 mr-3 cursor-pointer" onchange="applyFilters()"> Show All
+                        </label>
+                        <label class="flex items-center text-xs font-bold text-slate-700 cursor-pointer hover:text-black py-2 mb-1">
+                            <input type="radio" name="beds" value="5" class="w-3 h-3 mr-3 cursor-pointer" onchange="applyFilters()"> Min: 5 Beds
+                        </label>
+                    </div>
+                </div>
+
+                <div class="hud-panel z-30 relative bg-white border border-slate-200">
+                    <button onclick="toggleAccordion('rating-section')" class="w-full px-4 py-3 text-left font-black text-sm tracking-wide flex justify-between items-center text-black cursor-pointer">
+                        <span>Rating Status</span>
+                        <i id="icon-rating-section" class="fas fa-caret-down text-xs transition-transform" style="transform: rotate(0deg);"></i>
+                    </button>
+                    <div id="rating-section" class="filter-content px-4 bg-white relative z-40 border-t border-slate-100">
+                        <label class="flex items-center text-xs font-bold text-slate-700 cursor-pointer hover:text-black py-2 mb-1">
+                            <input type="radio" name="rating" value="0" checked class="w-3 h-3 mr-3 cursor-pointer" onchange="applyFilters()"> All Ratings
+                        </label>
+                        <label class="flex items-center text-xs font-bold text-slate-700 cursor-pointer hover:text-black py-2 mb-1">
+                            <input type="radio" name="rating" value="4.0" class="w-3 h-3 mr-3 cursor-pointer" onchange="applyFilters()"> 4.0+ Stars
+                        </label>
+                    </div>
+                </div>
+
+            </div>
+        </aside>
+
+        <!-- RIGHT SIDE: HOSPITAL LIST -->
+        <div class="flex-1 space-y-6 relative z-20" id="hospital-list">
+            
+            {% for h in hospitals %}
+            <!-- RESTRUCTURED 3-COLUMN CARD TO MATCH SCREENSHOT -->
+            <div class="hud-panel bg-white p-4 flex flex-row gap-5 hospital-row relative z-20" data-id="{{ h.id }}" data-name="{{ h.name | lower }}" data-specialties="{{ h.specialties | lower }}" data-rating="{{ h.rating }}">
+                
+                <!-- COL 1: Image -->
+                <div class="w-56 h-40 shrink-0 relative group bg-slate-100 shadow-sm border border-slate-200">
+                    <img src="{{ h.image }}" alt="{{ h.name }}" class="w-full h-full object-cover">
+                    
+                    <div class="absolute top-2 left-2 bg-white border border-slate-200 px-2 py-0.5 text-[0.65rem] font-black text-amber-600 flex items-center shadow-sm">
+                        <i class="fas fa-star mr-1"></i>{{ h.rating }}
+                    </div>
+                    
+                    <div class="distance-badge hidden absolute bottom-2 right-2 bg-slate-900 border border-slate-700 px-2 py-0.5 text-[0.65rem] font-black text-white flex items-center shadow-md">
+                        <i class="fas fa-location-arrow text-cyan-400 mr-1"></i>
+                        <span class="dist-val mr-1 font-mono">--</span> Km
+                    </div>
+                </div>
+
+                <!-- COL 2: Info & Capacity -->
+                <div class="flex-1 flex flex-col justify-between py-1">
+                    <div>
+                        <h2 class="text-2xl font-black text-black tracking-tight mb-1">{{ h.name }}</h2>
+                        
+                        <div class="mb-2">
+                            <a href="https://www.google.com/maps/search/?api=1&query={{ h.name }} {{ h.area }} Pune" target="_blank" class="inline-flex items-center text-xs font-bold text-slate-700 hover:text-black transition-colors cursor-pointer group">
+                                <i class="fas fa-map-marker-alt text-cyan-700 mr-1.5"></i> 
+                                Location: {{ h.area }}
+                            </a>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <span class="text-[0.65rem] font-black text-[var(--text-muted)] block uppercase tracking-wider mb-0.5">> Facility Expertise:</span>
+                            <p class="text-xs text-slate-900 font-bold">{{ h.specialties }}</p>
+                        </div>
+                    </div>
+
+                    <!-- CAPACITY GRID (Matching screenshot colors perfectly) -->
+                    <div class="flex gap-2">
+                        <!-- Total Beds -->
+                        <div class="bg-slate-100 border border-slate-300 px-3 py-1 min-w-[70px] text-center rounded-sm">
+                            <span class="block text-[0.55rem] font-black text-slate-600 uppercase tracking-widest mb-0.5">Total beds</span>
+                            <span class="text-xl font-black text-black" id="total-{{ h.id }}">{{ h.total_beds }}</span>
+                        </div>
+                        
+                        <!-- Available -->
+                        <div class="bg-[#e6f4ea] border border-[#34a853] px-3 py-1 min-w-[70px] text-center rounded-sm">
+                            <span class="block text-[0.55rem] font-black text-[#137333] uppercase tracking-widest mb-0.5">Available</span>
+                            <span class="text-xl font-black text-[#137333]" id="avail-{{ h.id }}">{{ h.avail_beds }}</span>
+                        </div>
+                        
+                        <!-- Occupied -->
+                        <div class="bg-[#fce8e6] border border-[#ea4335] px-3 py-1 min-w-[70px] text-center rounded-sm">
+                            <span class="block text-[0.55rem] font-black text-[#c5221f] uppercase tracking-widest mb-0.5">Occupied</span>
+                            <span class="text-xl font-black text-[#c5221f]" id="occ-{{ h.id }}">{{ h.occ_beds }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- COL 3: Action Buttons -->
+                <div class="w-32 shrink-0 flex flex-col justify-between items-end py-1">
+                    <a href="tel:{{ h.contact }}" onclick="handleCall(event, '{{ h.contact }}', '{{ h.name }}')" class="hud-btn w-full px-2 py-1.5 text-[0.7rem] flex items-center justify-center">
+                        <i class="fas fa-phone-alt mr-1.5"></i> Contact
+                    </a>
+                    
+                    <a href="/hospital/{{ h.id }}/counter" class="hud-btn w-full px-2 py-1.5 text-[0.7rem] flex items-center justify-center mt-auto">
+                        <i class="fas fa-bed mr-1.5"></i> Bed Status
+                    </a>
+                </div>
+
+            </div>
+            {% endfor %}
+
+            <div id="no-results" class="hidden w-full text-center py-10 hud-panel mt-4 border border-slate-300 shadow-sm bg-white">
+                <i class="fas fa-times-circle text-rose-600 text-3xl mb-3 animate-pulse"></i>
+                <h3 class="text-lg font-bold text-slate-900 tracking-widest">Err: No Data Found</h3>
+            </div>
+        </div>
+    </main>
+
+    <!-- FOOTER COPYRIGHT SECTION -->
+    <footer class="w-full text-center py-4 relative z-20 mt-auto bg-white/90 backdrop-blur-md border-t border-slate-300">
+        <p class="modern-font text-[0.65rem] font-black text-slate-600 tracking-widest px-4">
+            &copy; 2026 Community Engagement Program. All Rights Reserved.
+        </p>
+    </footer>
+
+    <!-- AI CHATBOT INTERFACE (Unchanged logic, scaled sizes) -->
+    <button id="chatbot-toggle" class="fixed bottom-6 left-6 z-[100] w-12 h-12 rounded-full bg-slate-900 border-2 border-cyan-400 text-cyan-400 flex items-center justify-center shadow-lg hover:scale-110 hover:bg-cyan-500 hover:text-white transition-all duration-300">
+        <i class="fas fa-robot text-xl"></i>
+    </button>
+
+    <div id="chatbot-window" class="fixed bottom-20 left-6 z-[100] w-80 h-96 bg-white backdrop-blur-xl border border-slate-300 shadow-2xl flex-col hidden overflow-hidden transition-all duration-300 transform scale-0 opacity-0 origin-bottom-left rounded-md">
+        <!-- Header -->
+        <div class="bg-slate-900 text-white px-4 py-3 flex justify-between items-center border-b border-cyan-500">
+            <div class="flex items-center font-bold tracking-widest text-xs">
+                <i class="fas fa-robot text-cyan-400 mr-2"></i> Care.ai
+            </div>
+            <button id="chatbot-close" class="text-gray-400 hover:text-white transition-colors"><i class="fas fa-times"></i></button>
+        </div>
+        <!-- Messages Area -->
+        <div class="flex-1 p-4 overflow-y-auto bg-slate-50 custom-scrollbar" id="chatbot-messages">
+            <div class="mb-4">
+                <span class="text-[0.65rem] font-bold text-slate-500 block mb-1">Care.ai</span>
+                <div class="bg-white text-slate-800 text-xs px-3 py-2 rounded-tr-md rounded-br-md rounded-bl-md border border-slate-200 shadow-sm inline-block font-semibold">
+                    Greetings. How can I assist you with facility or bed availability today?
+                </div>
+            </div>
+        </div>
+        <!-- Input Area -->
+        <div class="p-3 bg-white border-t border-slate-200 flex items-center">
+            <input type="text" id="chatbot-input" placeholder="Type Message..." class="flex-1 bg-slate-100 text-slate-800 text-xs px-3 py-2 border border-slate-300 focus:outline-none focus:border-cyan-500 font-bold rounded-sm">
+            <button id="chatbot-send" class="ml-2 w-8 h-8 bg-slate-900 text-cyan-400 flex items-center justify-center hover:bg-cyan-500 hover:text-white rounded-sm">
+                <i class="fas fa-paper-plane text-xs"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- LOGIC SCRIPTS (Unchanged functionalities) -->
+    <script>
+        function updateDateTime() {
+            const now = new Date();
+            const dateOptions = { day: 'numeric', month: 'long', year: 'numeric' };
+            const dateStr = now.toLocaleDateString('en-GB', dateOptions); 
+            const timeOptions = { hour: '2-digit', minute: '2-digit' };
+            const timeStr = now.toLocaleTimeString('en-US', timeOptions);
+            document.getElementById('live-datetime').textContent = dateStr + ' | ' + timeStr;
+        }
+        
+        updateDateTime();
+        setInterval(updateDateTime, 1000); 
+
+        function toggleAccordion(sectionId) {
+            const content = document.getElementById(sectionId);
+            const icon = document.getElementById('icon-' + sectionId);
+            content.classList.toggle('open');
+            icon.style.transform = content.classList.contains('open') ? 'rotate(180deg)' : 'rotate(0deg)';
+        }
+
+        function handleCall(event, phoneNumber, hospitalName) {
+            event.preventDefault();
+            if (confirm(`Open commlink to ${hospitalName} (${phoneNumber})?`)) {
+                window.location.href = `tel:${phoneNumber}`;
+            }
+        }
+
+        function applyFilters() {
+            const searchQuery = (document.getElementById('hospitalSearch').value || '').toLowerCase();
+            const distanceFilter = document.querySelector('input[name="distance"]:checked').value;
+            const bedsFilter = parseInt(document.querySelector('input[name="beds"]:checked').value) || 0;
+            const ratingFilter = parseFloat(document.querySelector('input[name="rating"]:checked').value) || 0; 
+            
+            const rows = document.querySelectorAll('.hospital-row');
+            let hasVisible = false;
+
+            rows.forEach(row => {
+                const name = (row.getAttribute('data-name') || '').toLowerCase();
+                const specs = (row.getAttribute('data-specialties') || '').toLowerCase();
+                const rowRating = parseFloat(row.getAttribute('data-rating')) || 0;
+                
+                const rowDistanceText = row.dataset.distance;
+                const rowDistance = rowDistanceText ? parseFloat(rowDistanceText) : 9999;
+                const hId = row.getAttribute('data-id');
+                
+                let availableBeds = 0;
+                const bedElement = document.getElementById('avail-' + hId);
+                if(bedElement) {
+                    let parsed = parseInt(bedElement.innerText);
+                    availableBeds = isNaN(parsed) ? 999 : parsed; 
+                }
+
+                const matchSearch = name.includes(searchQuery) || specs.includes(searchQuery);
+                const matchDistance = (distanceFilter === 'all') || (rowDistance <= parseFloat(distanceFilter));
+                const matchBeds = availableBeds >= bedsFilter;
+                const matchRating = rowRating >= ratingFilter;
+
+                if(matchSearch && matchDistance && matchBeds && matchRating) {
+                    row.style.display = 'flex';
+                    hasVisible = true;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            const noResults = document.getElementById('no-results');
+            if (noResults) {
+                noResults.style.display = hasVisible ? 'none' : 'block';
+            }
+        }
+
+        document.getElementById('hospitalSearch').addEventListener('input', applyFilters);
+
+        const hospitalCoords = {
+            "manipal-baner": { lat: 18.57, lng: 73.77 },
+            "ruby-sasoon": { lat: 18.53, lng: 73.87 },
+            "ruby-pcmc": { lat: 18.59, lng: 73.79 },
+            "ruby-hinjawadi": { lat: 18.59, lng: 73.73 },
+            "ruby-wanowrie": { lat: 18.49, lng: 73.89 },
+            "aditya-birla": { lat: 18.62, lng: 73.77 },
+            "sancheti": { lat: 18.53, lng: 73.85 },
+            "sahyadri-deccan": { lat: 18.51, lng: 73.84 },
+            "apollo-swargate": { lat: 18.50, lng: 73.86 },
+            "apollo-spectra": { lat: 18.50, lng: 73.85 }
+        };
+
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; 
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const userLat = position.coords.latitude;
+                        const userLng = position.coords.longitude;
+                        const listContainer = document.getElementById('hospital-list');
+                        const rows = Array.from(document.querySelectorAll('.hospital-row'));
+
+                        rows.forEach(row => {
+                            const hId = row.getAttribute('data-id');
+                            const coords = hospitalCoords[hId];
+                            if(coords) {
+                                const dist = calculateDistance(userLat, userLng, coords.lat, coords.lng);
+                                row.dataset.distance = dist;
+                                const badge = row.querySelector('.distance-badge');
+                                if(badge) {
+                                    badge.classList.remove('hidden');
+                                    badge.querySelector('.dist-val').innerText = dist.toFixed(1);
+                                }
+                            }
+                        });
+
+                        rows.sort((a, b) => parseFloat(a.dataset.distance || 9999) - parseFloat(b.dataset.distance || 9999));
+                        rows.forEach(row => listContainer.appendChild(row));
+                        
+                        applyFilters();
+                    },
+                    (error) => { applyFilters(); },
+                    { enableHighAccuracy: true }
+                );
+            } else {
+                applyFilters();
+            }
+        });
+
+        // AI CHATBOT LOGIC
+        const chatbotToggle = document.getElementById('chatbot-toggle');
+        const chatbotWindow = document.getElementById('chatbot-window');
+        const chatbotClose = document.getElementById('chatbot-close');
+        const chatbotInput = document.getElementById('chatbot-input');
+        const chatbotSend = document.getElementById('chatbot-send');
+        const chatbotMessages = document.getElementById('chatbot-messages');
+
+        function toggleChat() {
+            if (chatbotWindow.classList.contains('hidden')) {
+                chatbotWindow.classList.remove('hidden');
+                chatbotWindow.classList.add('flex');
+                setTimeout(() => {
+                    chatbotWindow.classList.add('scale-100', 'opacity-100');
+                    chatbotWindow.classList.remove('scale-0', 'opacity-0');
+                }, 10);
+            } else {
+                chatbotWindow.classList.remove('scale-100', 'opacity-100');
+                chatbotWindow.classList.add('scale-0', 'opacity-0');
+                setTimeout(() => {
+                    chatbotWindow.classList.add('hidden');
+                    chatbotWindow.classList.remove('flex');
+                }, 300);
+            }
+        }
+
+        chatbotToggle.addEventListener('click', toggleChat);
+        chatbotClose.addEventListener('click', toggleChat);
+
+        function capitalizeFirstLetter(string) {
+            if (!string) return "";
+            return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
+        }
+
+        function sendMessage() {
+            const rawText = chatbotInput.value.trim();
+            if (!rawText) return;
+            
+            const text = capitalizeFirstLetter(rawText);
+            
+            const userMsg = document.createElement('div');
+            userMsg.className = 'mb-3 text-right';
+            userMsg.innerHTML = `
+                <span class="text-[0.65rem] font-bold text-cyan-600 block mb-1">User</span>
+                <div class="bg-slate-900 text-white text-xs px-3 py-2 rounded-tl-md rounded-br-md rounded-bl-md inline-block text-left font-semibold shadow-sm">
+                    ${text}
+                </div>
+            `;
+            chatbotMessages.appendChild(userMsg);
+            chatbotInput.value = '';
+            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+
+            setTimeout(() => {
+                const aiMsg = document.createElement('div');
+                aiMsg.className = 'mb-3';
+                aiMsg.innerHTML = `
+                    <span class="text-[0.65rem] font-bold text-slate-500 block mb-1">Care.ai</span>
+                    <div class="bg-white text-slate-800 text-xs px-3 py-2 rounded-tr-md rounded-br-md rounded-bl-md border border-slate-200 shadow-sm inline-block font-semibold">
+                        Processing request... Please contact facility directly for real-time allocation.
+                    </div>
+                `;
+                chatbotMessages.appendChild(aiMsg);
+                chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+            }, 1000);
+        }
+
+        chatbotSend.addEventListener('click', sendMessage);
+        chatbotInput.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>
